@@ -85,6 +85,7 @@ class LMCacheEngine:
         memory_allocator: MemoryAllocatorInterface,
         token_database: TokenDatabase,
         gpu_connector: GPUConnectorInterface,
+        offload_gpu: GPUConnectorInterface
     ):
         logger.info(f"Creating LMCacheEngine with config: {config}")
         self.config = config
@@ -92,6 +93,7 @@ class LMCacheEngine:
         self.memory_allocator = memory_allocator
         self.token_database = token_database
         self.gpu_connector = gpu_connector
+        self.offload_gpu = offload_gpu
 
         self.enable_p2p = config.enable_p2p
 
@@ -364,16 +366,28 @@ class LMCacheEngine:
                 (VLLMPagedMemLayerwiseGPUConnector, VLLMBufferLayerwiseGPUConnector),
             )
 
+            assert isinstance(
+                self.offload_gpu,
+                (VLLMPagedMemLayerwiseGPUConnector, VLLMBufferLayerwiseGPUConnector),
+            )
+
             mem_obj_generator = self.gpu_connector.batched_from_gpu(
                 memory_objs, starts, ends, **kwargs
             )
 
             next(mem_obj_generator)
 
+            offload_generator = self.offload_gpu.batched_to_gpu(
+                starts, ends, **kwargs
+            )
+
             for layer_id in range(self.num_layers):
                 yield
                 next(mem_obj_generator)
                 self.storage_manager.batched_put(keys[layer_id], memory_objs[layer_id])
+                self.storage_manager.batched_put(keys[layer_id], memory_objs[layer_id])
+                next(offload_generator)
+
         else:
             # If no cache are found, we still need to yield to avoid
             # `StopIteration`
@@ -828,6 +842,7 @@ class LMCacheEngineBuilder:
         config: LMCacheEngineConfig,
         metadata: LMCacheEngineMetadata,
         gpu_connector: GPUConnectorInterface,
+        offload_gpu: GPUConnectorInterface
     ) -> LMCacheEngine:
         """
         Builds a new LMCacheEngine instance if it doesn't already exist for the
@@ -848,6 +863,7 @@ class LMCacheEngineBuilder:
                 memory_allocator,
                 token_database,
                 gpu_connector,
+                offload_gpu
             )
 
             cls._instances[instance_id] = engine

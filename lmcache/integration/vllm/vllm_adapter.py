@@ -223,8 +223,18 @@ def init_lmcache_engine(
             device=device,
             use_mla=use_mla,
         )
+    
+    offload_gpu_connector = VLLMBufferLayerwiseGPUConnector(
+        hidden_dim_size,
+        num_layer,
+        use_gpu=use_gpu,
+        chunk_size=chunk_size,
+        dtype=kv_dtype,
+        device= torch.device(f"cuda:1"),
+    )
+
     engine = LMCacheEngineBuilder.get_or_create(
-        ENGINE_NAME, config, metadata, vllm_gpu_connector
+        ENGINE_NAME, config, metadata, vllm_gpu_connector, offload_gpu_connector
     )
 
     return engine

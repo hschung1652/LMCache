@@ -30,6 +30,8 @@ from vllm.distributed.parallel_state import (
 from vllm.utils import cdiv
 from vllm.v1.core.sched.output import SchedulerOutput
 import torch
+from vllm.v1.attention.backends.flash_attn import FlashAttentionImpl
+from vllm.attention.utils.fa_utils import reshape_and_cache_flash
 
 # First Party
 from lmcache.integration.vllm.utils import (
@@ -46,6 +48,8 @@ from lmcache.v1.offload_server.zmq_server import ZMQOffloadServer
 from lmcache.v1.storage_backend.connector.nixl_connector_v3 import (
     NixlReceiverInfo,
 )
+from lmcache.v1.gpu_connector import VLLMBufferLayerwiseGPUConnector
+from lmcache.v1.compute.attention.flash_attn import OffloadFlashAttnBackend
 
 if TYPE_CHECKING:
     # Third Party
@@ -404,6 +408,8 @@ class LMCacheConnectorV1Impl:
             "skip_last_n_tokens", 0
         )
 
+        self.offload_attn: OffloadFlashAttnBackend = None
+
         self.num_layers = vllm_config.model_config.get_num_layers(
             vllm_config.parallel_config
         )
@@ -562,6 +568,7 @@ class LMCacheConnectorV1Impl:
         layer_name: str,
         kv_layer: torch.Tensor,
         attn_metadata: "AttentionMetadata",
+        attn_impl: "FlashAttentionImpl",
         **kwargs,
     ) -> None:
         """Start saving the a layer of KV cache from vLLM's paged buffer
@@ -590,6 +597,7 @@ class LMCacheConnectorV1Impl:
         kvcaches = list(self.kv_caches.values())
         if self.current_layer == 0:
             self.layerwise_storers = []
+            self.offload_attn = OffloadFlashAttnBackend(attn_metadata, attn_impl.scale, attn_impl.alibi_slopes, attn_impl.sliding_window, attn_impl.logits_soft_cap, attn_impl.vllm_flash_attn_version)
 
             is_first = False
 
@@ -655,6 +663,139 @@ class LMCacheConnectorV1Impl:
         for layerwise_storer in self.layerwise_storers:
             next(layerwise_storer)
 
+        self.current_layer += 1
+
+    @_lmcache_nvtx_annotate
+    def save_kv_layer_decode(
+        self,
+        layer_name: str,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        output : torch.Tensor,
+        q_scale: torch.Tensor,
+        k_scale: torch.Tensor,
+        v_scale: torch.Tensor,
+        attn_metadata: "AttentionMetadata",
+        **kwargs,
+    ) -> None:
+        """Start saving the a layer of KV cache from vLLM's paged buffer
+        to the connector.
+
+        Args:
+            layer_name (str): the name of the layer.
+            kv_layer (torch.Tensor): the paged KV buffer of the current
+                layer in vLLM.
+            attn_metadata (AttentionMetadata): the attention metadata.
+            **kwargs: additional arguments for the save operation.
+        """
+
+        if not self.use_layerwise:
+            return
+
+        if self.kv_role == "kv_consumer":
+            # Don't do save if the role is kv_consumer
+            return
+
+        connector_metadata = self._parent._get_connector_metadata()
+        assert isinstance(connector_metadata, LMCacheConnectorMetadata)
+
+        assert len(self.kv_caches) > 0
+
+        kvcaches = list(self.kv_caches.values())
+        if self.current_layer == 0:
+            self.layerwise_storers = []
+
+            is_first = False
+
+            for idx, request in enumerate(connector_metadata.requests):
+                save_spec = request.save_spec
+                if save_spec is None or not save_spec.can_save:
+                    continue
+
+                token_ids = request.token_ids
+                assert isinstance(token_ids, torch.Tensor)
+                assert token_ids.is_cpu
+
+                slot_mapping = request.slot_mapping
+                assert isinstance(slot_mapping, torch.Tensor)
+                assert len(slot_mapping) == len(token_ids)
+
+                # TODO: have a pre-allocated buffer to hold the slot_mappings
+                slot_mapping = slot_mapping.cuda()
+                # NOTE: In PD setting, lmcache_engine.lookup() will always
+                # return 0 if there is no local storage configured.
+                # In this case, we should rely on the slip_leading_tokens in
+                # save_spec to avoid transmit the already saved tokens again.
+                # skip_leading_tokens = max(
+                #    self.lmcache_engine.lookup(token_ids),
+                #    save_spec.skip_leading_tokens,
+                # )
+
+                if self.kv_role == "kv_producer":
+                    skip_leading_tokens = 0
+                else:
+                    skip_leading_tokens = save_spec.skip_leading_tokens
+
+                    if skip_leading_tokens == len(token_ids):
+                        continue  # skip this request
+                    # Align to lmcache chunk size
+                    skip_leading_tokens = (
+                        skip_leading_tokens
+                        // self._lmcache_chunk_size
+                        * self._lmcache_chunk_size
+                    )
+
+                store_mask = torch.ones_like(token_ids, dtype=torch.bool)
+                store_mask[:skip_leading_tokens] = False
+
+                logger.info(
+                    "Storing KV cache for %d out of %d tokens "
+                    "(skip_leading_tokens=%d) for request %s",
+                    len(token_ids) - skip_leading_tokens,
+                    len(token_ids),
+                    skip_leading_tokens,
+                    request.req_id,
+                )
+                if not is_first:
+                    sync = True
+                    is_first = True
+                else:
+                    sync = False
+
+                # TODO (Jiayi): need to make layerwise storing
+                # compatible with disagg spec
+                layerwise_storer = self.lmcache_engine.store_layer(
+                    token_ids,
+                    mask=store_mask,
+                    kvcaches=kvcaches,
+                    slot_mapping=slot_mapping,
+                    offset=skip_leading_tokens,
+                    sync=sync,
+                )
+                self.layerwise_storers.append(layerwise_storer)
+
+                assert isinstance(self.lmcache_engine.offload_gpu, VLLMBufferLayerwiseGPUConnector)
+
+                cur_kv = self.lmcache_engine.offload_gpu.get_kv(self.current_layer)
+                self.lmcache_engine.offload_gpu.query.copy_(query)
+                key_cache, value_cache = cur_kv.unbind(0)
+                reshape_and_cache_flash(
+                    key,
+                    value,
+                    key_cache,
+                    value_cache,
+                    attn_metadata.slot_mapping,
+                    self.kv_cache_dtype,
+                    k_scale,
+                    v_scale,
+                )
+
+                output = self.offload_attn.forward_contiguous(query, key, value, output, q_scale, k_scale, v_scale)
+
+        for layerwise_storer in self.layerwise_storers:
+            next(layerwise_storer)
+        
         self.current_layer += 1
 
     @_lmcache_nvtx_annotate

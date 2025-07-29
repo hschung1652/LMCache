@@ -112,3 +112,88 @@ class LMCFlashAttnBackend(AttentionInterface):
                 window_size=self.vllm_attn_impl.aot_sliding_window,
             )
         return None
+
+class OffloadFlashAttnBackend(AttentionInterface):
+    """
+    FlashAttention backend for Attention offloading.
+    This backend uses the FlashAttention implementation
+    for efficient attention computation.
+    """
+
+    def __init__(
+        self,
+        attn_metadata: FlashAttentionMetadata,
+        scale,
+        alibi_slopes,
+        sliding_window,
+        logits_soft_cap,
+        vllm_flash_attn_version
+    ):
+        
+        self.attn_metadata = attn_metadata
+        self.scale = scale
+        self.alibi_slopes = alibi_slopes
+        self.sliding_window = sliding_window
+        self.logits_soft_cap = logits_soft_cap
+        self.vllm_flash_attn_version = vllm_flash_attn_version
+
+        # TODO(Jiayi): remove this hardcode
+        self.aot_schedule = False
+
+    def forward_contiguous(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        output: torch.Tensor,
+        q_scale: torch.Tensor,
+        k_scale: torch.Tensor,
+        v_scale: torch.Tensor,
+        **kwargs,
+    ) -> torch.Tensor:
+        # num_actual_tokens = query.shape[0]
+
+        cu_seqlens_q = self.attn_metadata.query_start_loc
+        seqused_k = self.attn_metadata.seq_lens
+        cu_seqlens_k = self.attn_metadata.query_start_loc
+        max_seqlen_q = self.attn_metadata.max_query_len
+        max_seqlen_k = self.attn_metadata.max_seq_len
+
+        descale_shape = (cu_seqlens_q.shape[0] - 1, key.shape[1])
+
+        '''
+        scheduler_metadata = self._schedule(
+            batch_size=1,  # NOTE(Jiayi): Assuming batch size is 1,
+            # since we are processing request by request.
+            cu_query_lens=cu_seqlens_q,
+            max_query_len=max_seqlen_q,
+            seqlens=seqused_k,
+            max_seq_len=max_seqlen_k,
+            causal=True,  # Assuming causal attention
+        )
+        '''
+
+        flash_attn_varlen_func(
+            q=query,  # contiguous
+            k=key,  # contiguous
+            v=value,  # contiguous
+            out=output,
+            cu_seqlens_q=cu_seqlens_q,
+            max_seqlen_q=max_seqlen_q,
+            cu_seqlens_k=cu_seqlens_k,
+            # seqused_k=seqused_k,
+            max_seqlen_k=max_seqlen_k,
+            softmax_scale=self.scale,
+            causal=True,
+            alibi_slopes=self.alibi_slopes,
+            window_size=self.sliding_window,
+            block_table=None,
+            softcap=self.logits_soft_cap,
+            scheduler_metadata=None,
+            fa_version=self.vllm_flash_attn_version,
+            q_descale=q_scale.expand(descale_shape),
+            k_descale=k_scale.expand(descale_shape),
+            v_descale=v_scale.expand(descale_shape),
+        )
+
+        return output
