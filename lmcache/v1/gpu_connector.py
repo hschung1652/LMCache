@@ -340,7 +340,7 @@ class VLLMBufferLayerwiseGPUConnector(GPUConnectorInterface):
         shape = self.get_shape(max_tokens)
         self.dtype = kwargs["dtype"]
         self.device = kwargs["device"]
-        self.query = torch.Tensor(device=self.device)
+        self.query = torch.tensor([1,0], device=self.device)
         
         num_elements = shape.numel()
 
