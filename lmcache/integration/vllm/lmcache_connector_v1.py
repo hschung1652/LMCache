@@ -16,6 +16,8 @@ import torch
 
 # First Party
 from lmcache.integration.vllm.vllm_v1_adapter import LMCacheConnectorV1Impl
+from vllm.v1.attention.backends.flash_attn import FlashAttentionImpl
+
 
 if TYPE_CHECKING:
     # Third Party
@@ -70,6 +72,7 @@ class LMCacheConnectorV1Dynamic(KVConnectorBase_V1):
         layer_name: str,
         kv_layer: torch.Tensor,
         attn_metadata: "AttentionMetadata",
+        attn_impl: "FlashAttentionImpl",
         **kwargs,
     ) -> None:
         """
@@ -85,8 +88,24 @@ class LMCacheConnectorV1Dynamic(KVConnectorBase_V1):
             **kwargs: additional arguments for the save operation.
         """
         self._lmcache_engine.save_kv_layer(
-            layer_name, kv_layer, attn_metadata, **kwargs
+            layer_name, kv_layer, attn_metadata, attn_impl, **kwargs
         )
+
+    def save_kv_layer_decode(
+        self,
+        layer_name: str,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        output : torch.Tensor,
+        q_scale: torch.Tensor,
+        k_scale: torch.Tensor,
+        v_scale: torch.Tensor,
+        attn_metadata: "AttentionMetadata",
+        **kwargs,
+    ) -> None:
+        self._lmcache_engine.save_kv_layer_decode(layer_name, query, key, value, output, q_scale, k_scale, v_scale, attn_metadata,
+                                           **kwargs)
 
     def wait_for_save(self):
         """
