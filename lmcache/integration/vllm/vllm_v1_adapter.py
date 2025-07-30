@@ -581,31 +581,23 @@ class LMCacheConnectorV1Impl:
             attn_metadata (AttentionMetadata): the attention metadata.
             **kwargs: additional arguments for the save operation.
         """
-        print("----save_kv_layer----")
-        print(self.use_layerwise)
+
         if not self.use_layerwise:
             return
 
-        print(self.kv_role)
         if self.kv_role == "kv_consumer":
             # Don't do save if the role is kv_consumer
             return
 
         connector_metadata = self._parent._get_connector_metadata()
-        print(connector_metadata)
         assert isinstance(connector_metadata, LMCacheConnectorMetadata)
 
-        print("----save_kv_layer----")
-        print(self.kv_caches)
         assert len(self.kv_caches) > 0
         kvcaches = list(self.kv_caches.values())
-        print("----save_kv_layer----")
-        print(self.current_layer)
         if self.current_layer == 0:
             self.layerwise_storers = []
             self.offload_attn = OffloadFlashAttnBackend(attn_metadata, attn_impl.scale, attn_impl.alibi_slopes, attn_impl.sliding_window, attn_impl.logits_soft_cap, attn_impl.vllm_flash_attn_version)
-            print("----save_kv_layer----")
-            print(kvcaches)
+
             is_first = False
 
             for idx, request in enumerate(connector_metadata.requests):
@@ -697,6 +689,7 @@ class LMCacheConnectorV1Impl:
             **kwargs: additional arguments for the save operation.
         """
 
+        print("---save_kv_layer_decode---")
         if not self.use_layerwise:
             return
 
@@ -710,12 +703,8 @@ class LMCacheConnectorV1Impl:
         assert len(self.kv_caches) > 0
 
         kvcaches = list(self.kv_caches.values())
-        print("----save_kv_layer_decode----")
-        print(self.current_layer)
         if self.current_layer == 0:
             self.layerwise_storers = []
-            print("----save_kv_layer_decode----")
-            print(kvcaches)
 
             is_first = False
 

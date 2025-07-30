@@ -224,7 +224,7 @@ def init_lmcache_engine(
             use_mla=use_mla,
         )
     
-    offload_gpu_connector = VLLMBufferLayerwiseGPUConnector(
+    offload_gpu_connector = VLLMPagedMemLayerwiseGPUConnector(
         hidden_dim_size,
         num_layer,
         use_gpu=use_gpu,
