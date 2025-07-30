@@ -20,6 +20,7 @@ def setup_environment_variables(vllm_version: str, use_disk: bool = False):
 
     # LMCache is set to use 256 tokens per chunk
     os.environ["LMCACHE_CHUNK_SIZE"] = "256"
+    os.environ["LMCACHE_USE_LAYERWISE"] = "True"
 
     if use_disk:
         # Disable local CPU backend in LMCache
