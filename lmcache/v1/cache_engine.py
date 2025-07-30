@@ -381,6 +381,8 @@ class LMCacheEngine:
                 starts, ends, **kwargs
             )
 
+            next(offload_generator)
+
             for layer_id in range(self.num_layers):
                 yield
                 next(mem_obj_generator)
