@@ -581,15 +581,18 @@ class LMCacheConnectorV1Impl:
             attn_metadata (AttentionMetadata): the attention metadata.
             **kwargs: additional arguments for the save operation.
         """
-
+        print("----save_kv_layer----")
+        print(self.use_layerwise)
         if not self.use_layerwise:
             return
 
+        print(self.kv_role)
         if self.kv_role == "kv_consumer":
             # Don't do save if the role is kv_consumer
             return
 
         connector_metadata = self._parent._get_connector_metadata()
+        print(connector_metadata)
         assert isinstance(connector_metadata, LMCacheConnectorMetadata)
 
         print("----save_kv_layer----")
@@ -704,8 +707,6 @@ class LMCacheConnectorV1Impl:
         connector_metadata = self._parent._get_connector_metadata()
         assert isinstance(connector_metadata, LMCacheConnectorMetadata)
 
-        print("----save_kv_layer_decode----")
-        print(self.kv_caches)
         assert len(self.kv_caches) > 0
 
         kvcaches = list(self.kv_caches.values())
