@@ -593,12 +593,12 @@ class LMCacheConnectorV1Impl:
         assert isinstance(connector_metadata, LMCacheConnectorMetadata)
 
         assert len(self.kv_caches) > 0
-
         kvcaches = list(self.kv_caches.values())
         if self.current_layer == 0:
             self.layerwise_storers = []
             self.offload_attn = OffloadFlashAttnBackend(attn_metadata, attn_impl.scale, attn_impl.alibi_slopes, attn_impl.sliding_window, attn_impl.logits_soft_cap, attn_impl.vllm_flash_attn_version)
-
+            print("----save_kv_layer----")
+            print(kvcaches)
             is_first = False
 
             for idx, request in enumerate(connector_metadata.requests):
@@ -705,6 +705,8 @@ class LMCacheConnectorV1Impl:
         kvcaches = list(self.kv_caches.values())
         if self.current_layer == 0:
             self.layerwise_storers = []
+            print("----save_kv_layer_decode----")
+            print(kvcaches)
 
             is_first = False
 
@@ -792,6 +794,9 @@ class LMCacheConnectorV1Impl:
                 )
 
                 output = self.offload_attn.forward_contiguous(query, key, value, output, q_scale, k_scale, v_scale)
+
+                print("output")
+                print(output)
 
         for layerwise_storer in self.layerwise_storers:
             next(layerwise_storer)
