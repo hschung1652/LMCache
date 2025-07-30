@@ -582,6 +582,7 @@ class LMCacheConnectorV1Impl:
             **kwargs: additional arguments for the save operation.
         """
 
+        print("----save_kv_layer----")
         if not self.use_layerwise:
             return
 
@@ -692,6 +693,8 @@ class LMCacheConnectorV1Impl:
             **kwargs: additional arguments for the save operation.
         """
 
+        print("----save_kv_layer_decode----")
+
         if not self.use_layerwise:
             return
 
@@ -705,7 +708,7 @@ class LMCacheConnectorV1Impl:
         assert len(self.kv_caches) > 0
 
         kvcaches = list(self.kv_caches.values())
-        print("----save_kv_layer----")
+        print("----save_kv_layer_decode----")
         print(self.current_layer)
         if self.current_layer == 0:
             self.layerwise_storers = []
