@@ -594,6 +594,8 @@ class LMCacheConnectorV1Impl:
 
         assert len(self.kv_caches) > 0
         kvcaches = list(self.kv_caches.values())
+        print("---save_kv_layer---")
+        print(layer_name)
         if self.current_layer == 0:
             self.layerwise_storers = []
             self.offload_attn = OffloadFlashAttnBackend(attn_metadata, attn_impl.scale, attn_impl.alibi_slopes, attn_impl.sliding_window, attn_impl.logits_soft_cap, attn_impl.vllm_flash_attn_version)
