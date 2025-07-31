@@ -757,11 +757,16 @@ class LMCacheConnectorV1Impl:
                     skip_leading_tokens,
                     request.req_id,
                 )
+
+                '''
                 if not is_first:
                     sync = True
                     is_first = True
                 else:
                     sync = False
+                '''
+
+                sync = True
 
                 # TODO (Jiayi): need to make layerwise storing
                 # compatible with disagg spec
