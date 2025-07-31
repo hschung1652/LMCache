@@ -377,18 +377,20 @@ class LMCacheEngine:
 
             next(mem_obj_generator)
 
-            offload_generator = self.offload_gpu.batched_to_gpu(
-                starts, ends, **kwargs
-            )
-
-            next(offload_generator)
-
             for layer_id in range(self.num_layers):
                 yield
                 next(mem_obj_generator)
                 self.storage_manager.batched_put(keys[layer_id], memory_objs[layer_id])
                 self.storage_manager.batched_put(keys[layer_id], memory_objs[layer_id])
+                
+            offload_generator = self.offload_gpu.batched_to_gpu(
+                starts, ends, **kwargs
+            )
+
+            next(offload_generator)
+            for layer_id in range(self.num_layers):
                 next(offload_generator)
+            next(offload_generator)
 
         else:
             # If no cache are found, we still need to yield to avoid
