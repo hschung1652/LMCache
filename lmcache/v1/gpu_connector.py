@@ -353,8 +353,8 @@ class VLLMBufferLayerwiseGPUConnector(GPUConnectorInterface):
             gpu_buffer_size, device=self.device
         )
 
-        self.load_stream = torch.cuda.Stream()
-        self.store_stream = torch.cuda.Stream()
+        self.load_stream = torch.cuda.Stream(device=torch.device(f'cuda:0'))
+        self.store_stream = torch.cuda.Stream(device=torch.device(f'cuda:1'))
 
         self.buffer_mapping = {}
 
@@ -813,11 +813,6 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                         False,
                         True,
                     )
-
-                if memory_objs_layer == None:
-                    continue
-                else:
-                    print(memory_objs_layer)
         yield
 
         # synchronize the last layer
