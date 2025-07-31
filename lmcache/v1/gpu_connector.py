@@ -784,11 +784,6 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
             if layer_id > 0:
                 logger.debug(f"Finished loading layer {layer_id - 1}")
 
-            if memory_objs_layer == None:
-                continue
-            else:
-                print(memory_objs_layer)
-
             # memobj -> gpu_buffer -> kvcaches
             with torch.cuda.stream(self.load_stream):
                 for start, end, memory_obj in zip(
@@ -818,6 +813,11 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                         False,
                         True,
                     )
+                    
+                if memory_objs_layer == None:
+                    continue
+                else:
+                    print(memory_objs_layer)
         yield
 
         # synchronize the last layer
