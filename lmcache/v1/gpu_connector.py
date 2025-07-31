@@ -775,7 +775,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
             assert tmp_gpu_buffer_obj.tensor is not None
 
         offset = starts[0]
-        current_stream = torch.cuda.current_stream(torch.device(f"cuda:1"))
+        current_stream = torch.cuda.current_stream(torch.device(f"cuda:0"))
 
         for layer_id in range(self.num_layers):
             memory_objs_layer = yield
