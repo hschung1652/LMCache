@@ -382,14 +382,19 @@ class LMCacheEngine:
                 next(mem_obj_generator)
                 self.storage_manager.batched_put(keys[layer_id], memory_objs[layer_id])
                 self.storage_manager.batched_put(keys[layer_id], memory_objs[layer_id])
-                
+
+            get_generator = self.storage_manager.layerwise_batched_get(keys)
             offload_generator = self.offload_gpu.batched_to_gpu(
                 starts, ends, **kwargs
             )
-
             next(offload_generator)
+
             for layer_id in range(self.num_layers):
-                next(offload_generator)
+                tasks = next(get_generator)
+
+                mem_objs_layer = [task.result() for task in tasks]
+                offload_generator.send(mem_objs_layer)
+                
             next(offload_generator)
 
         else:
