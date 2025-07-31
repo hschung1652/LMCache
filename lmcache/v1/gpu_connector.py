@@ -683,8 +683,8 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         # All sizes are in bytes
         self.element_size = torch.tensor([], dtype=self.dtype).element_size()
 
-        self.load_stream = torch.cuda.Stream()
-        self.store_stream = torch.cuda.Stream()
+        self.load_stream = torch.cuda.Stream(device=torch.device(f'cuda:0'))
+        self.store_stream = torch.cuda.Stream(device=torch.device(f'cuda:1'))
 
     def _lazy_initialize_buffer(self, kv_caches):
         """
@@ -775,7 +775,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
             assert tmp_gpu_buffer_obj.tensor is not None
 
         offset = starts[0]
-        current_stream = torch.cuda.current_stream(torch.device(f"cuda:0"))
+        current_stream = torch.cuda.current_stream()
 
         for layer_id in range(self.num_layers):
             memory_objs_layer = yield
