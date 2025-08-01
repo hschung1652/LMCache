@@ -391,6 +391,10 @@ class LMCacheEngine:
             for layer_id in range(self.num_layers):
                 tasks = next(get_generator)
 
+                assert None not in tasks
+
+                yield None
+
                 mem_objs_layer = [task.result() for task in tasks]
                 offload_generator.send(mem_objs_layer)
 
