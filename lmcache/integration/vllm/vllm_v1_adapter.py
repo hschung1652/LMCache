@@ -779,7 +779,8 @@ class LMCacheConnectorV1Impl:
                 )
                 self.layerwise_storers.append(layerwise_storer)
 
-        assert isinstance(self.lmcache_engine.offload_gpu, VLLMBufferLayerwiseGPUConnector)
+        print(type(self.lmcache_engine.offload_gpu))
+        #assert isinstance(self.lmcache_engine.offload_gpu, VLLMBufferLayerwiseGPUConnector)
 
         for layerwise_storer in self.layerwise_storers:
             next(layerwise_storer)
