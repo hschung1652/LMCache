@@ -696,6 +696,7 @@ class LMCacheConnectorV1Impl:
             return
 
         if self.kv_role == "kv_consumer":
+            print("self.kv_role")
             # Don't do save if the role is kv_consumer
             return
 
@@ -778,29 +779,33 @@ class LMCacheConnectorV1Impl:
                 )
                 self.layerwise_storers.append(layerwise_storer)
 
-                assert isinstance(self.lmcache_engine.offload_gpu, VLLMBufferLayerwiseGPUConnector)
-
-                cur_kv = self.lmcache_engine.offload_gpu.get_kv(self.current_layer)
-                self.lmcache_engine.offload_gpu.query.copy_(query)
-                key_cache, value_cache = cur_kv.unbind(0)
-                reshape_and_cache_flash(
-                    key,
-                    value,
-                    key_cache,
-                    value_cache,
-                    attn_metadata.slot_mapping,
-                    self.kv_cache_dtype,
-                    k_scale,
-                    v_scale,
-                )
-
-                output = self.offload_attn.forward_contiguous(query, key, value, output, q_scale, k_scale, v_scale)
-
-                print("output")
-                print(output)
+        assert isinstance(self.lmcache_engine.offload_gpu, VLLMBufferLayerwiseGPUConnector)
 
         for layerwise_storer in self.layerwise_storers:
             next(layerwise_storer)
+
+            cur_kv = self.lmcache_engine.offload_gpu.get_kv(self.current_layer)
+            self.lmcache_engine.offload_gpu.query.copy_(query)
+            key_cache, value_cache = cur_kv.unbind(0)
+            reshape_and_cache_flash(
+                key,
+                value,
+                key_cache,
+                value_cache,
+                attn_metadata.slot_mapping,
+                self.kv_cache_dtype,
+                k_scale,
+                v_scale,
+            )
+
+            print(f"query: {query}")
+            print(f"key: {key}")
+            print(f"value: {value}")
+
+            output = self.offload_attn.forward_contiguous(query, key, value, output, q_scale, k_scale, v_scale)
+
+            print("output")
+            print(output)
         
         self.current_layer += 1
 

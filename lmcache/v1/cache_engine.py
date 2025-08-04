@@ -409,6 +409,90 @@ class LMCacheEngine:
         self.stats_monitor.on_store_finished(monitor_req_id, tot_token_num)
         logger.debug(f"Stored {tot_token_num} out of total {len(tokens)} tokens")
         yield
+    
+    @_lmcache_nvtx_annotate
+    @torch.inference_mode()
+    def update_kv_cache(
+        self,
+        tokens: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+        **kwargs,
+    ) -> Generator[None, None, None]:
+        """
+        Append new KV values to KV cache in a layerwise manner.
+
+        return: A generator that yields None. In the first iteration, the
+            generator allocates the memory objects for all layers and moves
+            the KV cache of the first layer from GPU to CPU. In the next
+            iterations, it moves the KV cache of layer i from GPU to the memory
+            objects (on CPU) and puts the memory objects of layer i-1 to the
+            storage backends. In the last iteration, it puts the memory objects
+            of the last layer to the storage backends.
+        """
+        starts = []
+        ends = []
+        keys = []
+        memory_objs = []
+        tot_token_num = 0
+        kv_dtype = self.metadata.kv_dtype
+        for start, end, cachekey in self.token_database.process_tokens(
+            tokens=tokens, mask=mask
+        ):
+            assert isinstance(cachekey, CacheEngineKey)
+
+            keys_multi_layer = cachekey.split_layers(self.num_layers)
+
+            # Only check the first layer
+            if self.storage_manager.contains(keys_multi_layer[0]):
+                continue
+
+            # Allocate the memory object
+            num_tokens = end - start
+            kv_shape_single_layer = self.gpu_connector.get_shape(num_tokens)
+
+            memory_objs_multi_layer = self.storage_manager.batched_allocate(
+                kv_shape_single_layer,
+                kv_dtype,
+                batch_size=self.num_layers,
+                fmt=self.fmt,
+            )
+
+            if memory_objs_multi_layer is None:
+                logger.warning(
+                    "Failed to allocate memory for the KV cache.\n"
+                    "The KV cache will not be stored."
+                )
+                break
+
+            starts.append(start)
+            ends.append(end)
+            keys.append(keys_multi_layer)
+            memory_objs.append(memory_objs_multi_layer)
+            tot_token_num += num_tokens
+
+            # Update lookup server
+            if self.lookup_server is not None:
+                self.lookup_server.batched_insert(keys_multi_layer)
+
+        if keys:
+            # Transpose the keys and memory objects into layer major format
+            memory_objs = [list(row) for row in zip(*memory_objs, strict=False)]
+            keys = [list(row) for row in zip(*keys, strict=False)]
+
+            assert isinstance(
+                self.gpu_connector,
+                (VLLMPagedMemLayerwiseGPUConnector, VLLMBufferLayerwiseGPUConnector),
+            )
+
+            assert isinstance(
+                self.offload_gpu,
+                (VLLMPagedMemLayerwiseGPUConnector, VLLMBufferLayerwiseGPUConnector),
+            )
+
+
+        yield
 
     @_lmcache_nvtx_annotate
     @torch.inference_mode()
