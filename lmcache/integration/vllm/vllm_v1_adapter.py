@@ -48,7 +48,7 @@ from lmcache.v1.offload_server.zmq_server import ZMQOffloadServer
 from lmcache.v1.storage_backend.connector.nixl_connector_v3 import (
     NixlReceiverInfo,
 )
-from lmcache.v1.gpu_connector import VLLMBufferLayerwiseGPUConnector
+from lmcache.v1.gpu_connector import VLLMPagedMemLayerwiseGPUConnector
 from lmcache.v1.compute.attention.flash_attn import OffloadFlashAttnBackend
 
 if TYPE_CHECKING:
@@ -779,8 +779,7 @@ class LMCacheConnectorV1Impl:
                 )
                 self.layerwise_storers.append(layerwise_storer)
 
-        print(type(self.lmcache_engine.offload_gpu))
-        #assert isinstance(self.lmcache_engine.offload_gpu, VLLMBufferLayerwiseGPUConnector)
+        assert isinstance(self.lmcache_engine.offload_gpu, VLLMPagedMemLayerwiseGPUConnector)
 
         for layerwise_storer in self.layerwise_storers:
             next(layerwise_storer)
