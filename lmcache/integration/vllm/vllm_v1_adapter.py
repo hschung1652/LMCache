@@ -691,7 +691,7 @@ class LMCacheConnectorV1Impl:
             **kwargs: additional arguments for the save operation.
         """
 
-        print("---save_kv_layer_decode---")
+        print(f"---save_kv_layer_decode: {layer_name} ---")
         if not self.use_layerwise:
             return
 
