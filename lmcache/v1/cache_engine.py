@@ -431,10 +431,12 @@ class LMCacheEngine:
             storage backends. In the last iteration, it puts the memory objects
             of the last layer to the storage backends.
         """
+        ret_mask = torch.zeros_like(tokens, dtype=torch.bool, device="cpu")
+
         starts = []
         ends = []
         keys = []
-        memory_objs = []
+        
         tot_token_num = 0
         kv_dtype = self.metadata.kv_dtype
         for start, end, cachekey in self.token_database.process_tokens(
@@ -446,40 +448,18 @@ class LMCacheEngine:
 
             # Only check the first layer
             if self.storage_manager.contains(keys_multi_layer[0]):
-                continue
-
-            # Allocate the memory object
-            num_tokens = end - start
-            kv_shape_single_layer = self.gpu_connector.get_shape(num_tokens)
-
-            memory_objs_multi_layer = self.storage_manager.batched_allocate(
-                kv_shape_single_layer,
-                kv_dtype,
-                batch_size=self.num_layers,
-                fmt=self.fmt,
-            )
-
-            if memory_objs_multi_layer is None:
-                logger.warning(
-                    "Failed to allocate memory for the KV cache.\n"
-                    "The KV cache will not be stored."
-                )
                 break
 
             starts.append(start)
             ends.append(end)
             keys.append(keys_multi_layer)
-            memory_objs.append(memory_objs_multi_layer)
-            tot_token_num += num_tokens
 
-            # Update lookup server
-            if self.lookup_server is not None:
-                self.lookup_server.batched_insert(keys_multi_layer)
+            ret_mask[start:end] = True
 
         if keys:
             # Transpose the keys and memory objects into layer major format
-            memory_objs = [list(row) for row in zip(*memory_objs, strict=False)]
             keys = [list(row) for row in zip(*keys, strict=False)]
+            get_generator = self.storage_manager.layerwise_batched_get(keys)
 
             assert isinstance(
                 self.gpu_connector,
@@ -490,6 +470,23 @@ class LMCacheEngine:
                 self.offload_gpu,
                 (VLLMPagedMemLayerwiseGPUConnector, VLLMBufferLayerwiseGPUConnector),
             )
+
+            new_key = yield
+            new_value = yield
+
+            for layer_id in range(self.num_layers):
+                tasks = next(get_generator)
+
+                assert None not in tasks
+
+                yield None
+
+                mem_objs_layer = [task.result() for task in tasks]
+
+                key_cache, value_cache = mem_objs_layer[layer_id].unbind(0)
+                key_cache.append(new_key)
+                value_cache.append(new_value)
+
 
 
         yield

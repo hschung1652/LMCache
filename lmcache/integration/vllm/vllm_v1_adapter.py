@@ -667,7 +667,7 @@ class LMCacheConnectorV1Impl:
         self.current_layer += 1
 
     @_lmcache_nvtx_annotate
-    def save_kv_layer_decode(
+    def update_kv_cache(
         self,
         layer_name: str,
         query: torch.Tensor,
@@ -691,7 +691,7 @@ class LMCacheConnectorV1Impl:
             **kwargs: additional arguments for the save operation.
         """
 
-        print(f"---save_kv_layer_decode: {layer_name} ---")
+        #print(f"---save_kv_layer_decode: {layer_name} ---")
         if not self.use_layerwise:
             return
 
@@ -712,6 +712,7 @@ class LMCacheConnectorV1Impl:
             is_first = False
 
             for idx, request in enumerate(connector_metadata.requests):
+                print(f"---{layer_name}: request {idx}---")
                 save_spec = request.save_spec
                 if save_spec is None or not save_spec.can_save:
                     continue
@@ -769,7 +770,7 @@ class LMCacheConnectorV1Impl:
 
                 # TODO (Jiayi): need to make layerwise storing
                 # compatible with disagg spec
-                layerwise_storer = self.lmcache_engine.store_layer(
+                layerwise_storer = self.lmcache_engine.update_kv_cache(
                     token_ids,
                     mask=store_mask,
                     kvcaches=kvcaches,
@@ -784,9 +785,9 @@ class LMCacheConnectorV1Impl:
         for layerwise_storer in self.layerwise_storers:
             next(layerwise_storer)
 
-            cur_kv = self.lmcache_engine.offload_gpu.get_kv(self.current_layer)
             self.lmcache_engine.offload_gpu.query.copy_(query)
-            key_cache, value_cache = cur_kv.unbind(0)
+            key_cache, value_cache = self.lmcache_engine.offload_gpu.kvcaches[self.current_layer].unbind(0)
+            
             reshape_and_cache_flash(
                 key,
                 value,
@@ -802,7 +803,7 @@ class LMCacheConnectorV1Impl:
             print(f"key: {key}")
             print(f"value: {value}")
 
-            output = self.offload_attn.forward_contiguous(query, key, value, output, q_scale, k_scale, v_scale)
+            output = self.offload_attn.forward_contiguous(self.lmcache_engine.offload_gpu.query, key, value, output, q_scale, k_scale, v_scale)
 
             print("output")
             print(output)
