@@ -16,6 +16,7 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional, Union
 import os
+import re
 
 # Third Party
 from vllm.config import VllmConfig
@@ -700,36 +701,31 @@ class LMCacheConnectorV1Impl:
             # Don't do save if the role is kv_consumer
             return
 
-        connector_metadata = self._parent._get_connector_metadata()
-        assert isinstance(connector_metadata, LMCacheConnectorMetadata)
+        temp = re.findall(r'\d+', layer_name)
+        layer_id = list(map(int, temp))[0]
 
-        for layerwise_storer in self.layerwise_storers:
-            next(layerwise_storer)
-
-            self.lmcache_engine.offload_gpu.query.copy_(query)
-            key_cache, value_cache = self.lmcache_engine.offload_gpu.kvcaches[self.current_layer].unbind(0)
-            
-            reshape_and_cache_flash(
-                key,
-                value,
-                key_cache,
-                value_cache,
-                attn_metadata.slot_mapping,
-                self.kv_cache_dtype,
-                k_scale,
-                v_scale,
-            )
-
-            print(f"query: {query}")
-            print(f"key: {key}")
-            print(f"value: {value}")
-
-            output = self.offload_attn.forward_contiguous(self.lmcache_engine.offload_gpu.query, key, value, output, q_scale, k_scale, v_scale)
-
-            print("output")
-            print(output)
+        self.lmcache_engine.offload_gpu.query.copy_(query)
+        key_cache, value_cache = self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)
         
-        self.current_layer += 1
+        reshape_and_cache_flash(
+            key,
+            value,
+            key_cache,
+            value_cache,
+            attn_metadata.slot_mapping,
+            self.kv_cache_dtype,
+            k_scale,
+            v_scale,
+        )
+
+        print(f"query: {query}")
+        print(f"key: {key}")
+        print(f"value: {value}")
+
+        output = self.offload_attn.forward_contiguous(self.lmcache_engine.offload_gpu.query, key, value, output, q_scale, k_scale, v_scale)
+
+        print("output")
+        print(output)
 
     @_lmcache_nvtx_annotate
     def wait_for_save(self):
