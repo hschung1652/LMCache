@@ -19,7 +19,7 @@ import os
 import re
 
 # Third Party
-from vllm.config import VllmConfig
+from vllm.config import VllmConfig, CacheDType
 from vllm.distributed.kv_transfer.kv_connector.v1.base import (
     KVConnectorBase_V1,
     KVConnectorMetadata,
@@ -678,6 +678,7 @@ class LMCacheConnectorV1Impl:
         q_scale: torch.Tensor,
         k_scale: torch.Tensor,
         v_scale: torch.Tensor,
+        cache_dtype: CacheDType,
         attn_metadata: "AttentionMetadata",
         **kwargs,
     ) -> None:
@@ -713,7 +714,7 @@ class LMCacheConnectorV1Impl:
             key_cache,
             value_cache,
             attn_metadata.slot_mapping,
-            self.kv_cache_dtype,
+            cache_dtype,
             k_scale,
             v_scale,
         )
