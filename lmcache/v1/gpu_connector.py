@@ -680,6 +680,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         self.query = torch.empty((1,32,128), device=self.device)
 
         self.kvcaches: Optional[List[torch.Tensor]] = None
+        print(f"init: {self.device}")
 
         # All sizes are in bytes
         self.element_size = torch.tensor([], dtype=self.dtype).element_size()
@@ -705,6 +706,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
             logger.info(f"Lazily initializing GPU buffer (max tokens={max_tokens}).")
             num_elements = k_cache_shape_per_layer.numel() * 2
             gpu_buffer_size = num_elements * self.element_size
+            print(f"_lazy_initialize_buffer: {self.device}")
             self.gpu_buffer_allocator = GPUMemoryAllocator(
                 gpu_buffer_size, device=self.device
             )
