@@ -706,22 +706,21 @@ class LMCacheConnectorV1Impl:
         layer_id = list(map(int, temp))[0]
 
         self.lmcache_engine.offload_gpu.query.copy_(query)
-        key_cache, value_cache = self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)
         
         reshape_and_cache_flash(
             key,
             value,
-            key_cache,
-            value_cache,
+            self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)[0],
+            self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)[1],
             attn_metadata.slot_mapping,
             cache_dtype,
             k_scale,
             v_scale,
         )
 
-        print(f"query: {self.lmcache_engine.offload_gpu.query}")
-        #print(f"key: {key_cache}")
-        #print(f"value: {value_cache}")
+        #print(f"query: {self.lmcache_engine.offload_gpu.query}")
+        print(f"key: {self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)[0]}")
+        print(f"value: {self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)[1]}")
 
         output = self.offload_attn.forward_contiguous(self.lmcache_engine.offload_gpu.query, key, value, output, q_scale, k_scale, v_scale)
 
