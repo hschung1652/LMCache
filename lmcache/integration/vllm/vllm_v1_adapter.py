@@ -719,9 +719,9 @@ class LMCacheConnectorV1Impl:
             v_scale,
         )
 
-        print(f"query: {query}")
-        print(f"key: {key}")
-        print(f"value: {value}")
+        print(f"query: {self.lmcache_engine.offload_gpu.query}")
+        print(f"key: {key_cache}")
+        print(f"value: {value_cache}")
 
         output = self.offload_attn.forward_contiguous(self.lmcache_engine.offload_gpu.query, key, value, output, q_scale, k_scale, v_scale)
 
