@@ -765,7 +765,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         slot_mapping_full = torch.cat(slot_mapping_chunks, dim=0)
 
         num_tokens = len(slot_mapping_full)
-        print(f'device: {self.kvcaches.get_device()}')
+        print(f'device: {self.kvcaches[layer_id].get_device()}')
 
         if self.use_gpu:
             buffer_shape = self.get_shape(num_tokens)
