@@ -760,7 +760,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         slot_mapping: torch.Tensor = kwargs["slot_mapping"]
         sync: bool = kwargs["sync"]
 
-        self._lazy_initialize_buffer(self.offload_kv)
+        self._lazy_initialize_buffer(self.offload_kvcaches)
 
         slot_mapping_chunks = []
         for start, end in zip(starts, ends, strict=False):
