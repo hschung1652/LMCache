@@ -416,7 +416,7 @@ class LMCacheConnectorV1Impl:
             vllm_config.parallel_config
         )
 
-        for layer_id in self.num_layers:
+        for layer_id in range(self.num_layers):
             self.offload_kv_caches.append(torch.empty((0,1), device=torch.device(f"cuda:1")))
 
         self.current_layer = 0
