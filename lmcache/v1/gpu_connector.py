@@ -765,7 +765,6 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         slot_mapping_full = torch.cat(slot_mapping_chunks, dim=0)
 
         num_tokens = len(slot_mapping_full)
-        print(f'device: {self.kvcaches[layer_id].get_device()}')
 
         if self.use_gpu:
             buffer_shape = self.get_shape(num_tokens)
@@ -786,6 +785,8 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                 current_stream.wait_stream(self.load_stream)
             if layer_id > 0:
                 logger.debug(f"Finished loading layer {layer_id - 1}")
+            
+            print(f'device: {self.kvcaches[layer_id].get_device()}')
 
             # memobj -> gpu_buffer -> kvcaches
             with torch.cuda.stream(self.load_stream):
