@@ -760,7 +760,10 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         slot_mapping: torch.Tensor = kwargs["slot_mapping"]
         sync: bool = kwargs["sync"]
 
-        self._lazy_initialize_buffer(self.offload_kvcaches)
+        if "offload_kv" in kwargs:
+            self._lazy_initialize_buffer(self.offload_kvcaches)
+        else:
+            self._lazy_initialize_buffer(self.kvcaches)
 
         slot_mapping_chunks = []
         for start, end in zip(starts, ends, strict=False):
@@ -802,6 +805,27 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                             memory_obj.tensor, non_blocking=True
                         )
                     else:
+                        if "offload_kv" in kwargs:
+                            lmc_ops.single_layer_kv_transfer(
+                                memory_obj.tensor,
+                                self.offload_kvcaches[layer_id][0],
+                                self.offload_kvcaches[layer_id][1],
+                                slot_mapping_full,
+                                False,
+                                True,
+                            )
+                        else:
+                            lmc_ops.single_layer_kv_transfer(
+                                memory_obj.tensor,
+                                self.kvcaches[layer_id][0],
+                                self.kvcaches[layer_id][1],
+                                slot_mapping_full,
+                                False,
+                                True,
+                            )
+
+                if self.use_gpu:
+                    if "offload_kv" in kwargs:
                         lmc_ops.single_layer_kv_transfer(
                             memory_obj.tensor,
                             self.offload_kvcaches[layer_id][0],
@@ -810,16 +834,15 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                             False,
                             True,
                         )
-
-                if self.use_gpu:
-                    lmc_ops.single_layer_kv_transfer(
-                        tmp_gpu_buffer_obj.tensor,
-                        self.offload_kvcaches[layer_id][0],
-                        self.offload_kvcaches[layer_id][1],
-                        slot_mapping_full,
-                        False,
-                        True,
-                    )
+                    else:
+                        lmc_ops.single_layer_kv_transfer(
+                            memory_obj.tensor,
+                            self.kvcaches[layer_id][0],
+                            self.kvcaches[layer_id][1],
+                            slot_mapping_full,
+                            False,
+                            True,
+                        )
         yield
 
         # synchronize the last layer
