@@ -385,7 +385,9 @@ class LMCacheConnectorV1Impl:
             )
 
         self.kv_caches: dict[str, torch.Tensor] = {}
-        self.offload_kv_caches: dict[str, torch.Tensor] = dict[str, torch.empty((0,1), device=torch.device(f"cuda:1"))]
+        self.offload_kv_caches: list[torch.Tensor]
+        for layer_id in self.num_layers:
+            self.offload_kv_caches.append(torch.empty((0,1), device=torch.device(f"cuda:1")))
 
         self._block_size = vllm_config.cache_config.block_size
 
@@ -657,7 +659,7 @@ class LMCacheConnectorV1Impl:
                     token_ids,
                     mask=store_mask,
                     kvcaches=kvcaches,
-                    offload_kv=list(self.offload_kv_caches.values()),
+                    offload_kv=self.offload_kv_caches,
                     slot_mapping=slot_mapping,
                     offset=skip_leading_tokens,
                     sync=True,
