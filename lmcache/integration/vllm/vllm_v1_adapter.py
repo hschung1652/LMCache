@@ -417,7 +417,7 @@ class LMCacheConnectorV1Impl:
         )
 
         for layer_id in range(self.num_layers):
-            self.offload_kv_caches.append(torch.empty((1,699,16), device=torch.device(f"cuda:1")))
+            self.offload_kv_caches.append(torch.empty((2,699,16), device=torch.device(f"cuda:1")))
 
         self.current_layer = 0
 
@@ -713,13 +713,13 @@ class LMCacheConnectorV1Impl:
 
         self.lmcache_engine.offload_gpu.query.copy_(query)
 
-        print(f"value: {self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id][1]}")
+        #print(f"value: {self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id][1]}")
         
         reshape_and_cache_flash(
             key,
             value,
-            self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id][0],
-            self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id][1],
+            self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)[0],
+            self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)[1],
             attn_metadata.slot_mapping,
             cache_dtype,
             k_scale,
@@ -727,7 +727,7 @@ class LMCacheConnectorV1Impl:
         )
 
         #print(f"query: {self.lmcache_engine.offload_gpu.query}")
-        #print(f"value: {self.lmcache_engine.offload_gpu.kvcaches[layer_id][1]}")
+        print(f"key: {self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)[0]}")
 
         output = self.offload_attn.forward_contiguous(self.lmcache_engine.offload_gpu.query, key, value, output, q_scale, k_scale, v_scale)
 
