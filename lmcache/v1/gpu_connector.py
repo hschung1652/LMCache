@@ -679,7 +679,9 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         print(hidden_dim_size)
         self.query = torch.empty((1,32,128), device=self.device)
 
-        self.kvcaches: Optional[List[torch.tensor]] = List[torch.tensor(device=torch.device(f'cuda:1'))]
+        torch.empty()
+
+        self.kvcaches: Optional[List[torch.Tensor]] = List[torch.empty([1,0],device=torch.device(f'cuda:1'))]
 
         # All sizes are in bytes
         self.element_size = torch.tensor([], dtype=self.dtype).element_size()
