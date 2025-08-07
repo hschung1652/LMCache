@@ -385,7 +385,7 @@ class LMCacheConnectorV1Impl:
             )
 
         self.kv_caches: dict[str, torch.Tensor] = {}
-        self.offload_kv_caches: list[torch.Tensor]
+        self.offload_kv_caches: list[torch.Tensor] = []
 
         self._block_size = vllm_config.cache_config.block_size
 
