@@ -658,7 +658,7 @@ class LMCacheConnectorV1Impl:
                     kvcaches=kvcaches,
                     slot_mapping=slot_mapping,
                     offset=skip_leading_tokens,
-                    sync=sync,
+                    sync=True,
                 )
                 self.layerwise_storers.append(layerwise_storer)
 
