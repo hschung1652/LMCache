@@ -666,7 +666,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
     ):
         self.hidden_dim_size = hidden_dim_size
         self.num_layers = num_layers
-        self.use_gpu = use_gpu
+        self.use_gpu = False
 
         self.gpu_buffer_allocator = None
 
