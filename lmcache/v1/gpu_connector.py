@@ -706,6 +706,8 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
             # is okay since fragmentation shouldn't exist in the `gpu_buffer_allocator`
             # in layerwise mode.
             k_cache_shape_per_layer = kv_caches[0][0].shape
+            print(k_cache_shape_per_layer[0])
+            print(k_cache_shape_per_layer[1])
             max_tokens = k_cache_shape_per_layer[0] * k_cache_shape_per_layer[1]
             logger.info(f"Lazily initializing GPU buffer (max tokens={max_tokens}).")
             num_elements = k_cache_shape_per_layer.numel() * 2
