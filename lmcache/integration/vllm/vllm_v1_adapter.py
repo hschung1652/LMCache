@@ -386,8 +386,6 @@ class LMCacheConnectorV1Impl:
 
         self.kv_caches: dict[str, torch.Tensor] = {}
         self.offload_kv_caches: list[torch.Tensor]
-        for layer_id in self.num_layers:
-            self.offload_kv_caches.append(torch.empty((0,1), device=torch.device(f"cuda:1")))
 
         self._block_size = vllm_config.cache_config.block_size
 
@@ -417,6 +415,10 @@ class LMCacheConnectorV1Impl:
         self.num_layers = vllm_config.model_config.get_num_layers(
             vllm_config.parallel_config
         )
+
+        for layer_id in self.num_layers:
+            self.offload_kv_caches.append(torch.empty((0,1), device=torch.device(f"cuda:1")))
+
         self.current_layer = 0
 
         self.force_skip_save = bool(os.environ.get("LMCACHE_FORCE_SKIP_SAVE", False))
