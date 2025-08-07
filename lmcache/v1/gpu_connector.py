@@ -679,6 +679,8 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         print(hidden_dim_size)
         self.query = torch.empty((1,32,128), device=self.device)
 
+        print(f"init dev: {self.device}")
+
         self.kvcaches: Optional[List[torch.Tensor]] = List[torch.empty((0,1),device=self.device)]
 
         # All sizes are in bytes
@@ -778,8 +780,9 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
 
         offset = starts[0]
         current_stream = torch.cuda.current_stream()
-
-        print(f'device: {self.kvcaches[0].get_device()}')
+        
+        for layer_id in range(self.num_layers):
+            print(f"device: {self.kvcaches[layer_id].get_device()}")
 
         for layer_id in range(self.num_layers):
             memory_objs_layer = yield
