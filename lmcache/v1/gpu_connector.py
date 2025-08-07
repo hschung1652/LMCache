@@ -852,7 +852,8 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
             current_stream.wait_stream(self.load_stream)
 
         # free the buffer memory
-        tmp_gpu_buffer_obj.ref_count_down()
+        if self.use_gpu:
+            tmp_gpu_buffer_obj.ref_count_down()
 
         logger.debug(f"Finished loading layer {layer_id}")
         yield
@@ -965,7 +966,8 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
             logger.debug(f"Finished offloading layer {layer_id}")
 
         # free the buffer memory
-        tmp_gpu_buffer_obj.ref_count_down()
+        if self.use_gpu:
+            tmp_gpu_buffer_obj.ref_count_down()
         yield
 
     def get_shape(self, num_tokens: int) -> torch.Size:
