@@ -710,8 +710,8 @@ class LMCacheConnectorV1Impl:
         reshape_and_cache_flash(
             key,
             value,
-            self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)[0],
-            self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)[1],
+            self.lmcache_engine.offload_gpu.kvcaches[layer_id][0],
+            self.lmcache_engine.offload_gpu.kvcaches[layer_id][1],
             attn_metadata.slot_mapping,
             cache_dtype,
             k_scale,
@@ -719,8 +719,8 @@ class LMCacheConnectorV1Impl:
         )
 
         #print(f"query: {self.lmcache_engine.offload_gpu.query}")
-        #print(f"key: {self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)[0]}")
-        #print(f"value: {self.lmcache_engine.offload_gpu.kvcaches[layer_id].unbind(0)[1]}")
+        print(f"key: {self.lmcache_engine.offload_gpu.kvcaches[layer_id][0]}")
+        #print(f"value: {self.lmcache_engine.offload_gpu.kvcaches[layer_id][1]}")
 
         output = self.offload_attn.forward_contiguous(self.lmcache_engine.offload_gpu.query, key, value, output, q_scale, k_scale, v_scale)
 
