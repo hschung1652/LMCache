@@ -717,11 +717,11 @@ class LMCacheConnectorV1Impl:
         key = key.to(device=torch.device(f'cuda:1'))
         value = value.to(device=torch.device(f'cuda:1'))
 
-        print(f"key: {key}")
+        print(f"key: {key_cache}")
         
         reshape_and_cache_flash(
-            key.flatten(),
-            value.flatten(),
+            key,
+            value,
             key_cache,
             value_cache,
             attn_metadata.slot_mapping.flatten(),
