@@ -726,8 +726,8 @@ class LMCacheConnectorV1Impl:
             value_cache,
             attn_metadata.slot_mapping.flatten(),
             cache_dtype,
-            k_scale,
-            v_scale,
+            k_scale.flatten(),
+            v_scale.flatten(),
         )
 
         #print(f"query: {self.lmcache_engine.offload_gpu.query}")
