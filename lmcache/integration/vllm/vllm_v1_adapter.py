@@ -719,8 +719,8 @@ class LMCacheConnectorV1Impl:
         reshape_and_cache_flash(
             key,
             value,
-            key_cache,
-            value_cache,
+            key_cache.flatten(),
+            value_cache.flatten(),
             attn_metadata.slot_mapping.flatten(),
             cache_dtype,
             k_scale,
