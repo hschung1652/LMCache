@@ -679,7 +679,6 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         self.dtype = kwargs["dtype"]
         self.device = kwargs["device"]
         print(hidden_dim_size)
-        self.query = torch.empty((1,32,128), device=self.device)
 
         print(f"init dev: {self.device}")
 

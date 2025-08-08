@@ -711,7 +711,7 @@ class LMCacheConnectorV1Impl:
         temp = re.findall(r'\d+', layer_name)
         layer_id = list(map(int, temp))[0]
 
-        self.lmcache_engine.offload_gpu.query.copy_(query)
+        query = query.to(device=torch.device(f'cuda:1'))
         key_cache, value_cache = self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)
 
         key = key.to(device=torch.device(f'cuda:1'))
@@ -720,8 +720,8 @@ class LMCacheConnectorV1Impl:
         print(f"key: {key}")
         
         reshape_and_cache_flash(
-            key,
-            value,
+            key.flatten(),
+            value.flatten(),
             key_cache,
             value_cache,
             attn_metadata.slot_mapping.flatten(),
@@ -733,7 +733,7 @@ class LMCacheConnectorV1Impl:
         #print(f"query: {self.lmcache_engine.offload_gpu.query}")
         print(f"key: {self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)[0]}")
 
-        output = self.offload_attn.forward_contiguous(self.lmcache_engine.offload_gpu.query, key, value, output, q_scale, k_scale, v_scale)
+        output = self.offload_attn.forward_contiguous(query, key, value, output, q_scale, k_scale, v_scale)
 
         print("output")
         print(output)
