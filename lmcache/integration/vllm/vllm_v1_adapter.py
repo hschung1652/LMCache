@@ -714,7 +714,10 @@ class LMCacheConnectorV1Impl:
         self.lmcache_engine.offload_gpu.query.copy_(query)
         key_cache, value_cache = self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)
 
-        print(f"key: {key_cache}")
+        key = key.to(device='cuda:1')
+        value = value.to(value='cuda:1')
+
+        print(f"key: {key}")
         
         reshape_and_cache_flash(
             key,
