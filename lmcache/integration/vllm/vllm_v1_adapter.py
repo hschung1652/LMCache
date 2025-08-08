@@ -712,13 +712,14 @@ class LMCacheConnectorV1Impl:
         layer_id = list(map(int, temp))[0]
 
         query = query.to(device=torch.device(f'cuda:1'))
+        print(f"kvcache: {self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].size()}")
         key_cache, value_cache = self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)
 
         key = key.to(device=torch.device(f'cuda:1'))
         value = value.to(device=torch.device(f'cuda:1'))
 
-        print(f"key: {key.squeeze().size()}")
-        print(f"value: {value.squeeze().size()}")
+        print(f"key: {key.size()}")
+        print(f"value: {value.size()}")
         print(f"key_cache: {key_cache.size()}")
         print(f"value_cache: {value_cache.size()}")
         print(f"attn_metadata: {attn_metadata.slot_mapping.size()}")
