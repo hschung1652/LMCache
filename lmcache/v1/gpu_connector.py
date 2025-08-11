@@ -807,7 +807,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                             memory_obj.tensor, non_blocking=True
                         )
                     else:
-                        if "offload_kv" in kwargs:
+                        if kwargs["offload_kv"] is True:
                             lmc_ops.single_layer_kv_transfer(
                                 memory_obj.tensor,
                                 self.offload_kvcaches[layer_id][0],
@@ -827,7 +827,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                             )
 
                 if self.use_gpu:
-                    if "offload_kv" in kwargs:
+                    if kwargs["offload_kv"] is True:
                         lmc_ops.single_layer_kv_transfer(
                             memory_obj.tensor,
                             self.offload_kvcaches[layer_id][0],
