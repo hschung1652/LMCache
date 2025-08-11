@@ -685,6 +685,9 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         self.kvcaches: Optional[List[torch.Tensor]] = None
         self.offload_kvcaches: Optional[List[torch.Tensor]] = None
 
+        for layer_id in range(self.num_layers):
+            self.offload_kvcaches.append(torch.empty((2,699,16), device=torch.device(f"cuda:1")))
+
         # All sizes are in bytes
         self.element_size = torch.tensor([], dtype=self.dtype).element_size()
 
