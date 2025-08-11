@@ -666,7 +666,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
     ):
         self.hidden_dim_size = hidden_dim_size
         self.num_layers = num_layers
-        self.use_gpu = False
+        self.use_gpu = use_gpu
 
         self.gpu_buffer_allocator = None
 
@@ -761,7 +761,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         slot_mapping: torch.Tensor = kwargs["slot_mapping"]
         sync: bool = kwargs["sync"]
 
-        if "offload_kv" in kwargs:
+        if kwargs["offload_kv"] is True:
             self._lazy_initialize_buffer(self.offload_kvcaches)
         else:
             self._lazy_initialize_buffer(self.kvcaches)
