@@ -683,7 +683,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         print(f"init dev: {self.device}")
 
         self.kvcaches: Optional[List[torch.Tensor]] = None
-        self.offload_kvcaches: Optional[List[torch.Tensor]] = []
+        self.offload_kvcaches: List[torch.Tensor] = []
 
         for layer_id in range(self.num_layers):
             self.offload_kvcaches.append(torch.empty((2,699,16), device=torch.device(f"cuda:1")))
@@ -694,7 +694,7 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
         self.load_stream = torch.cuda.Stream(device=torch.device(f'cuda:0'))
         self.store_stream = torch.cuda.Stream(device=torch.device(f'cuda:1'))
 
-    def _lazy_initialize_buffer(self, kv_caches):
+    def _lazy_initialize_buffer(self, kv_caches: List[torch.Tensor]):
         """
         Lazily initialize the GPU buffer allocator if it is not initialized yet.
         Currently, we use the `kv_caches` (kv cache pointer) to determine
