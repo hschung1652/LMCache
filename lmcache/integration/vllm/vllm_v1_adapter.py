@@ -722,8 +722,8 @@ class LMCacheConnectorV1Impl:
         print(f"k_scale: {k_scale}")
         print(f"v_scale: {v_scale}")
 
-        key_cache.append(key.squeeze())
-        value_cache.append(value.squeeze())
+        torch.cat((key_cache, key.squeeze()), dim=0)
+        torch.cat((value_cache, value.squeeze()), dim=0)
 
         #print(f"query: {self.lmcache_engine.offload_gpu.query}")
         print(f"key: {self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)[0]}")
