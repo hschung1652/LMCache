@@ -721,17 +721,9 @@ class LMCacheConnectorV1Impl:
         print(f"attn_metadata: {attn_metadata.slot_mapping.size()}")
         print(f"k_scale: {k_scale}")
         print(f"v_scale: {v_scale}")
-        
-        reshape_and_cache_flash(
-            key.squeeze().transpose(1, 2),
-            value.squeeze().transpose(1, 2),
-            key_cache,
-            value_cache,
-            attn_metadata.slot_mapping,
-            cache_dtype,
-            k_scale,
-            v_scale,
-        )
+
+        key_cache.append(key.squeeze())
+        value_cache.append(value.squeeze())
 
         #print(f"query: {self.lmcache_engine.offload_gpu.query}")
         print(f"key: {self.lmcache_engine.offload_gpu.offload_kvcaches[layer_id].unbind(0)[0]}")
