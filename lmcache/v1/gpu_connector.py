@@ -816,6 +816,8 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                                 False,
                                 True,
                             )
+                            print( self.offload_kvcaches[layer_id][0].size())
+                            print( self.offload_kvcaches[layer_id][1].size())
                         else:
                             lmc_ops.single_layer_kv_transfer(
                                 memory_obj.tensor,
@@ -836,6 +838,8 @@ class VLLMPagedMemLayerwiseGPUConnector(GPUConnectorInterface):
                             False,
                             True,
                         )
+                        print( self.offload_kvcaches[layer_id][0].size())
+                        print( self.offload_kvcaches[layer_id][1].size())
                     else:
                         lmc_ops.single_layer_kv_transfer(
                             memory_obj.tensor,
